@@ -115,6 +115,29 @@
     background: var(--accent-yellow); color: #fff;
     font-size: 17px; padding: 18px;
   }
+  .btn-back { background: none; color: #999; font-size: 14px; padding: 8px; }
+
+  /* 回答の確認ページ */
+  #confirm-list { margin-bottom: 20px; }
+  .confirm-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+  }
+  .confirm-q { font-size: 14px; }
+  .chip {
+    flex-shrink: 0;
+    border-radius: 99px;
+    padding: 4px 14px;
+    font-size: 14px;
+    font-weight: bold;
+  }
+  .chip-yes { background: var(--main-green); color: #fff; }
+  .chip-no  { background: #e8e4dc; color: #888; }
 
   /* 結果画面 */
   .result-danger-label { text-align: center; font-size: 15px; color: #888; margin-bottom: 4px; }
@@ -233,6 +256,15 @@
     <p id="question-text" class="question-text"></p>
     <button class="btn btn-yes" onclick="answer(true)">はい（あてはまる）</button>
     <button class="btn btn-no" onclick="answer(false)">いいえ</button>
+    <button id="btn-back" class="btn btn-back" onclick="goBack()">← ひとつ前にもどる</button>
+  </div>
+
+  <!-- ━━━━━━━━ 回答の確認ページ ━━━━━━━━ -->
+  <div id="screen-confirm" class="screen">
+    <h1 style="font-size:19px;">回答の確認</h1>
+    <p class="start-note">タップすると「はい ⇔ いいえ」を直せます</p>
+    <div id="confirm-list"></div>
+    <button class="btn btn-start" onclick="confirmResult()">この内容で結果を見る</button>
   </div>
 
   <!-- ━━━━━━━━ 結果画面 ━━━━━━━━ -->
@@ -422,7 +454,9 @@ const SESSION_ID = Math.random().toString(36).slice(2, 8);
 let mode = "quick";        // いまのコース（quick=サクッと / full=しっかり）
 let questions = [];        // いま使っている質問セット
 let currentQuestion = 0;   // いま何問目か
-let yesCount = 0;          // 「はい」の数
+let answers = [];          // 各質問の答え（true=はい / false=いいえ）
+let maxReached = 0;        // 進んだ最高地点（戻っても二重記録しないため）
+let yesCount = 0;          // 「はい」の数（確認ページの後に集計）
 let catCount = {};         // 分野ごとの「はい」の数
 
 // スプレッドシートに1行記録する（SHEET_URLが空なら何もしない）
@@ -451,8 +485,8 @@ function startQuiz(selectedMode) {
   mode = selectedMode;
   questions = (mode === "quick") ? QUESTIONS_QUICK : QUESTIONS_FULL;
   currentQuestion = 0;
-  yesCount = 0;
-  catCount = { input: 0, structure: 0, formula: 0, print: 0, reuse: 0 };
+  answers = [];
+  maxReached = 0;
   logEvent("診断スタート");
   showScreen("screen-quiz");
   showQuestion();
@@ -465,26 +499,74 @@ function showQuestion() {
   document.getElementById("question-text").textContent = questions[currentQuestion].text;
   document.getElementById("progress-fill").style.width =
     (currentQuestion / questions.length * 100) + "%";
+  // 1問目だけ「もどる」を隠す
+  document.getElementById("btn-back").style.display = (currentQuestion === 0) ? "none" : "block";
 }
 
 // 「はい」「いいえ」を押したとき
 function answer(isYes) {
-  if (isYes) {
-    yesCount++;
-    catCount[questions[currentQuestion].cat]++;
-  }
+  answers[currentQuestion] = isYes;
   currentQuestion++;
 
   // しっかり版は5問ごとに「ここまで来た」を記録（離脱がどこか分かる）
-  if (mode === "full" && (currentQuestion === 5 || currentQuestion === 10 || currentQuestion === 15)) {
-    logEvent(currentQuestion + "問目まで回答");
+  // ※「もどる」で答え直しても、二重には記録しない
+  if (currentQuestion > maxReached) {
+    maxReached = currentQuestion;
+    if (mode === "full" && (maxReached === 5 || maxReached === 10 || maxReached === 15)) {
+      logEvent(maxReached + "問目まで回答");
+    }
   }
 
   if (currentQuestion < questions.length) {
     showQuestion();
   } else {
-    showResult();
+    showConfirm();
   }
+}
+
+// 「← ひとつ前にもどる」を押したとき
+function goBack() {
+  if (currentQuestion > 0) {
+    currentQuestion--;
+    showQuestion();
+  }
+}
+
+// 回答の確認ページを表示する
+function showConfirm() {
+  logEvent("確認ページ到達");
+  renderConfirmList();
+  showScreen("screen-confirm");
+}
+
+// 確認ページの一覧を描く（行をタップすると はい⇔いいえ が入れ替わる）
+function renderConfirmList() {
+  const list = document.getElementById("confirm-list");
+  list.innerHTML = "";
+  questions.forEach((q, i) => {
+    const row = document.createElement("div");
+    row.className = "confirm-row";
+    row.onclick = () => { answers[i] = !answers[i]; renderConfirmList(); };
+    row.innerHTML =
+      '<span class="confirm-q">' + (i + 1) + '. ' + q.text + '</span>' +
+      (answers[i]
+        ? '<span class="chip chip-yes">はい</span>'
+        : '<span class="chip chip-no">いいえ</span>');
+    list.appendChild(row);
+  });
+}
+
+// 「この内容で結果を見る」を押したとき：答えを集計してから結果へ
+function confirmResult() {
+  yesCount = 0;
+  catCount = { input: 0, structure: 0, formula: 0, print: 0, reuse: 0 };
+  answers.forEach((ans, i) => {
+    if (ans) {
+      yesCount++;
+      catCount[questions[i].cat]++;
+    }
+  });
+  showResult();
 }
 
 // 結果を表示する
