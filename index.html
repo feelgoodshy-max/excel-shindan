@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>あなたの「自己流Excel」危険度診断</title>
+<style>
+  /* ════════════════════════════════════════
+     見た目の設定（色を変えたいときはここ）
+     ════════════════════════════════════════ */
+  :root {
+    --main-green: #217346;   /* Excelグリーン（メインの色） */
+    --soft-bg: #f7f5f0;      /* 背景のやわらかいベージュ */
+    --text-color: #3a3a3a;   /* 文字の色 */
+    --accent-red: #d9534f;   /* 危険度ゲージの赤 */
+    --accent-yellow: #e8a33d;/* 危険度ゲージの黄 */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    background: var(--soft-bg);
+    color: var(--text-color);
+    line-height: 1.8;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 480px;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    padding: 32px 24px;
+    margin-top: 24px;
+    height: fit-content;
+  }
+
+  h1 {
+    font-size: 22px;
+    text-align: center;
+    color: var(--main-green);
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 24px;
+  }
+
+  /* 進み具合のバー */
+  .progress-area { margin-bottom: 24px; display: none; }
+  .progress-label { font-size: 13px; color: #888; text-align: center; margin-bottom: 6px; }
+  .progress-bar-bg {
+    background: #e8e4dc;
+    border-radius: 99px;
+    height: 10px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    background: var(--main-green);
+    height: 100%;
+    width: 0%;
+    border-radius: 99px;
+    transition: width 0.3s;
+  }
+
+  /* 質問文 */
+  .question-text {
+    font-size: 19px;
+    font-weight: bold;
+    text-align: center;
+    min-height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+
+  /* ボタン */
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 18px;
+    font-size: 18px;
+    font-weight: bold;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    margin-bottom: 14px;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-yes { background: var(--main-green); color: #fff; }
+  .btn-no  { background: #fff; color: var(--main-green); border: 2px solid var(--main-green); }
+  .btn-start {
+    background: var(--main-green); color: #fff;
+    font-size: 20px; padding: 20px;
+  }
+  .btn-retry { background: #eee; color: #666; font-size: 15px; padding: 14px; }
+
+  /* 結果画面 */
+  .result-danger-label { text-align: center; font-size: 15px; color: #888; margin-bottom: 4px; }
+  .result-danger {
+    text-align: center;
+    font-size: 44px;
+    font-weight: bold;
+    margin-bottom: 16px;
+  }
+  .danger-low  { color: var(--main-green); }
+  .danger-mid  { color: var(--accent-yellow); }
+  .danger-high { color: var(--accent-red); }
+
+  /* 危険度ゲージ */
+  .gauge-bg {
+    background: #e8e4dc;
+    border-radius: 99px;
+    height: 18px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .gauge-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 99px;
+    transition: width 1s ease-out;
+  }
+  .gauge-caption { font-size: 12px; color: #aaa; display: flex; justify-content: space-between; margin-bottom: 24px; }
+
+  .result-zone {
+    text-align: center;
+    background: var(--soft-bg);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 16px;
+    margin-bottom: 20px;
+  }
+
+  .result-message {
+    font-size: 16px;
+    margin-bottom: 24px;
+    white-space: pre-line;
+  }
+
+  .yes-count { text-align: center; font-size: 14px; color: #888; margin-bottom: 20px; }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .start-note { font-size: 14px; color: #888; text-align: center; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ━━━━━━━━ スタート画面 ━━━━━━━━ -->
+  <div id="screen-start" class="screen active">
+    <h1>あなたの「自己流Excel」<br>危険度診断</h1>
+    <p class="subtitle">かんたん10問・1分で終わります</p>
+    <p class="start-note">
+      「はい」「いいえ」をタップするだけ。<br>
+      正直に答えるほど、結果が役に立ちます😊
+    </p>
+    <button class="btn btn-start" onclick="startQuiz()">診断をはじめる</button>
+  </div>
+
+  <!-- ━━━━━━━━ 質問画面 ━━━━━━━━ -->
+  <div id="screen-quiz" class="screen">
+    <div class="progress-area" style="display:block;">
+      <p class="progress-label"><span id="q-number"></span></p>
+      <div class="progress-bar-bg"><div id="progress-fill" class="progress-bar-fill"></div></div>
+    </div>
+    <p id="question-text" class="question-text"></p>
+    <button class="btn btn-yes" onclick="answer(true)">はい（あてはまる）</button>
+    <button class="btn btn-no" onclick="answer(false)">いいえ</button>
+  </div>
+
+  <!-- ━━━━━━━━ 結果画面 ━━━━━━━━ -->
+  <div id="screen-result" class="screen">
+    <p class="result-danger-label">あなたの自己流Excel危険度は…</p>
+    <p id="result-danger" class="result-danger"></p>
+    <div class="gauge-bg"><div id="gauge-fill" class="gauge-fill"></div></div>
+    <p class="gauge-caption"><span>低</span><span>中</span><span>高</span></p>
+    <p id="result-zone" class="result-zone"></p>
+    <p id="yes-count" class="yes-count"></p>
+    <p id="result-message" class="result-message"></p>
+    <button class="btn btn-retry" onclick="location.reload()">もう一度診断する</button>
+  </div>
+
+</div>
+
+<script>
+/* ════════════════════════════════════════════════════
+   ① 質問はここで直せます
+   ・「,」で区切って並んでいます。文章だけ書き換えてOK
+   ・質問を増やす/減らすのも自由（数は自動で対応します）
+   ════════════════════════════════════════════════════ */
+const QUESTIONS = [
+  "合計を電卓で計算して、Excelに手で打ち込んだことがある",
+  "ふりがなを、1件ずつ手で入力している",
+  "毎月・毎年、同じ表をゼロから作り直している",
+  "印刷したら表が切れて、何度も印刷し直したことがある",
+  "見た目を整えるために、セル結合をよく使っている",
+  "並べ替えをしたら、データがぐちゃぐちゃになったことがある",
+  "使っている関数は、ほぼSUMだけ",
+  "同じデータを、あちこちの表に何度もコピペしている",
+  "日付や曜日を、ぜんぶ手で打ち込んでいる",
+  "「このファイル、私しか触れない…」という表がある"
+];
+
+/* ════════════════════════════════════════════════════
+   ② 結果メッセージはここで直せます
+   ・min〜max ＝「はい」の数がこの範囲なら、この結果が出ます
+   ・danger ＝ 大きく出る危険度／zone ＝ レベルの添え書き
+   ・message ＝ 本文（改行したいところに \n を入れます）
+   ════════════════════════════════════════════════════ */
+const RESULTS = [
+  {
+    min: 0, max: 2,
+    danger: "低",
+    dangerClass: "danger-low",
+    zone: "いまのレベル：中〜上級ゾーン",
+    message: "すばらしい！\nExcelの「仕組み」をちゃんと使えています。\n\nあとは関数の引き出しを増やしたり、ピボットテーブルを味方につけたりすると、もっとラクになりますよ。\n\nここまで来ている人は、伸ばすほど周りに頼られる存在になります😊"
+  },
+  {
+    min: 3, max: 5,
+    danger: "中",
+    dangerClass: "danger-mid",
+    zone: "いまのレベル：ミックスゾーン（できている所と自己流が半々）",
+    message: "おしい！\nできている部分と、自己流でがんばっちゃってる部分が混ざっている状態です。\n\nでもね、これって実は一番伸びる位置。\n「はい」がついた項目は、ぜんぶExcelに任せられる作業なんです。\n\nそこを手放せたら、毎月の作業がぐっと軽くなりますよ。"
+  },
+  {
+    min: 6, max: 999,
+    danger: "高",
+    dangerClass: "danger-high",
+    zone: "いまのレベル：自己流フル稼働ゾーン",
+    message: "毎日、ほんとうにがんばっています。\nその作業、ぜんぶ手でやっていたら大変だったはず…。\n\nでもね、いいお知らせがあります。\n「はい」がついた項目は、Excelの機能で自動にできるものばかり。\n\nつまりあなたは、伸びしろMAX✨\n正しい使い方を知った瞬間、一番変化が大きいタイプです。"
+  }
+];
+
+/* ════════════════════════════════════════════════════
+   ③ ここから下が「動かす仕組み」です
+   （直さなくて大丈夫。読みたいときのために説明コメント付き）
+   ════════════════════════════════════════════════════ */
+
+let currentQuestion = 0;  // いま何問目か
+let yesCount = 0;         // 「はい」の数
+
+// 「診断をはじめる」を押したとき
+function startQuiz() {
+  showScreen("screen-quiz");
+  showQuestion();
+}
+
+// 質問を1問表示する
+function showQuestion() {
+  document.getElementById("q-number").textContent =
+    "質問 " + (currentQuestion + 1) + " / " + QUESTIONS.length;
+  document.getElementById("question-text").textContent = QUESTIONS[currentQuestion];
+  document.getElementById("progress-fill").style.width =
+    (currentQuestion / QUESTIONS.length * 100) + "%";
+}
+
+// 「はい」「いいえ」を押したとき
+function answer(isYes) {
+  if (isYes) yesCount++;
+  currentQuestion++;
+  if (currentQuestion < QUESTIONS.length) {
+    showQuestion();       // 次の質問へ
+  } else {
+    showResult();         // 全部答えたら結果へ
+  }
+}
+
+// 結果を表示する
+function showResult() {
+  // 「はい」の数に合う結果を探す
+  const result = RESULTS.find(r => yesCount >= r.min && yesCount <= r.max);
+
+  document.getElementById("result-danger").textContent = result.danger;
+  document.getElementById("result-danger").className = "result-danger " + result.dangerClass;
+  document.getElementById("result-zone").textContent = result.zone;
+  document.getElementById("yes-count").textContent =
+    "（「はい」が " + yesCount + " 個 / " + QUESTIONS.length + " 問中）";
+  document.getElementById("result-message").textContent = result.message;
+
+  showScreen("screen-result");
+
+  // 危険度ゲージをじわっと伸ばす
+  const percent = Math.min(yesCount / QUESTIONS.length * 100, 100);
+  const fill = document.getElementById("gauge-fill");
+  const colors = { "danger-low": "#217346", "danger-mid": "#e8a33d", "danger-high": "#d9534f" };
+  fill.style.background = colors[result.dangerClass];
+  setTimeout(() => { fill.style.width = percent + "%"; }, 100);
+}
+
+// 画面を切り替える（指定した画面だけ見せる）
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+</script>
+
+</body>
+</html>
