@@ -55,13 +55,13 @@
   }
 
   /* 進み具合のバー */
-  .progress-area { margin-bottom: 24px; display: none; }
   .progress-label { font-size: 13px; color: #888; text-align: center; margin-bottom: 6px; }
   .progress-bar-bg {
     background: #e8e4dc;
     border-radius: 99px;
     height: 10px;
     overflow: hidden;
+    margin-bottom: 24px;
   }
   .progress-bar-fill {
     background: var(--main-green);
@@ -102,9 +102,19 @@
   .btn-no  { background: #fff; color: var(--main-green); border: 2px solid var(--main-green); }
   .btn-start {
     background: var(--main-green); color: #fff;
-    font-size: 20px; padding: 20px;
+    font-size: 18px; padding: 20px;
   }
+  .btn-start-light {
+    background: #fff; color: var(--main-green);
+    border: 2px solid var(--main-green);
+    font-size: 18px; padding: 20px;
+  }
+  .btn-note { font-size: 13px; font-weight: normal; opacity: 0.85; }
   .btn-retry { background: #eee; color: #666; font-size: 15px; padding: 14px; }
+  .btn-more {
+    background: var(--accent-yellow); color: #fff;
+    font-size: 17px; padding: 18px;
+  }
 
   /* 結果画面 */
   .result-danger-label { text-align: center; font-size: 15px; color: #888; margin-bottom: 4px; }
@@ -151,6 +161,45 @@
 
   .yes-count { text-align: center; font-size: 14px; color: #888; margin-bottom: 20px; }
 
+  /* 処方箋（しっかり版だけ表示） */
+  .advice-box {
+    background: #eef7f1;
+    border: 2px solid var(--main-green);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 24px;
+  }
+  .advice-title { font-weight: bold; color: var(--main-green); font-size: 16px; margin-bottom: 8px; }
+  .advice-text { font-size: 15px; white-space: pre-line; }
+
+  /* アンケート */
+  .survey-box {
+    background: var(--soft-bg);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  .survey-title { font-size: 14px; color: #888; text-align: center; margin-bottom: 8px; }
+  .survey-question { font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 14px; }
+  .btn-survey {
+    background: #fff; color: var(--text-color);
+    border: 2px solid #ccc;
+    font-size: 16px; padding: 14px;
+  }
+  .survey-thanks { text-align: center; font-size: 15px; margin-bottom: 12px; }
+  .survey-comment {
+    width: 100%;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    margin-bottom: 10px;
+    resize: vertical;
+    min-height: 70px;
+  }
+  .btn-send { background: var(--main-green); color: #fff; font-size: 15px; padding: 12px; }
+
   .screen { display: none; }
   .screen.active { display: block; }
 
@@ -164,20 +213,23 @@
   <!-- ━━━━━━━━ スタート画面 ━━━━━━━━ -->
   <div id="screen-start" class="screen active">
     <h1>あなたの「自己流Excel」<br>危険度診断</h1>
-    <p class="subtitle">かんたん10問・1分で終わります</p>
+    <p class="subtitle">はい・いいえをタップするだけ</p>
     <p class="start-note">
-      「はい」「いいえ」をタップするだけ。<br>
-      正直に答えるほど、結果が役に立ちます😊
+      お好きなコースをどうぞ😊<br>
+      正直に答えるほど、結果が役に立ちます
     </p>
-    <button class="btn btn-start" onclick="startQuiz()">診断をはじめる</button>
+    <button class="btn btn-start" onclick="startQuiz('quick')">
+      サクッと診断<br><span class="btn-note">5問・30秒</span>
+    </button>
+    <button class="btn btn-start-light" onclick="startQuiz('full')">
+      しっかり診断<br><span class="btn-note">20問・3分／あなた専用のアドバイス付き</span>
+    </button>
   </div>
 
   <!-- ━━━━━━━━ 質問画面 ━━━━━━━━ -->
   <div id="screen-quiz" class="screen">
-    <div class="progress-area" style="display:block;">
-      <p class="progress-label"><span id="q-number"></span></p>
-      <div class="progress-bar-bg"><div id="progress-fill" class="progress-bar-fill"></div></div>
-    </div>
+    <p class="progress-label"><span id="q-number"></span></p>
+    <div class="progress-bar-bg"><div id="progress-fill" class="progress-bar-fill"></div></div>
     <p id="question-text" class="question-text"></p>
     <button class="btn btn-yes" onclick="answer(true)">はい（あてはまる）</button>
     <button class="btn btn-no" onclick="answer(false)">いいえ</button>
@@ -192,70 +244,216 @@
     <p id="result-zone" class="result-zone"></p>
     <p id="yes-count" class="yes-count"></p>
     <p id="result-message" class="result-message"></p>
-    <button class="btn btn-retry" onclick="location.reload()">もう一度診断する</button>
+
+    <!-- 処方箋（しっかり版だけ中身が入る） -->
+    <div id="advice-box" class="advice-box" style="display:none;">
+      <p class="advice-title">🎯 まずこれをやるといい</p>
+      <p id="advice-text" class="advice-text"></p>
+    </div>
+
+    <!-- サクッと版→しっかり版への誘導 -->
+    <button id="btn-more" class="btn btn-more" style="display:none;" onclick="goFull()">
+      もっと詳しく診断する（20問）→
+    </button>
+
+    <!-- アンケート -->
+    <div class="survey-box">
+      <p class="survey-title">💬 よかったら教えてください（匿名です）</p>
+      <div id="survey-step1">
+        <p class="survey-question">もし「基礎から整える、<br>怖くないExcel講座」があったら…</p>
+        <button class="btn btn-survey" onclick="surveyAnswer('興味ある！')">興味ある！</button>
+        <button class="btn btn-survey" onclick="surveyAnswer('ちょっと気になる')">ちょっと気になる</button>
+        <button class="btn btn-survey" onclick="surveyAnswer('今はいいかな')">今はいいかな</button>
+      </div>
+      <div id="survey-step2" style="display:none;">
+        <p class="survey-thanks">ありがとうございます😊<br>最後に、Excelの困りごとがあれば一言どうぞ（任意）</p>
+        <textarea id="survey-comment" class="survey-comment" placeholder="例：毎月のシフト表づくりが大変…"></textarea>
+        <button class="btn btn-send" onclick="surveyComment()">送信する</button>
+      </div>
+      <div id="survey-step3" style="display:none;">
+        <p class="survey-thanks">届きました！ありがとうございます✨</p>
+      </div>
+    </div>
+
+    <button class="btn btn-retry" onclick="location.reload()">最初に戻る</button>
   </div>
 
 </div>
 
 <script>
 /* ════════════════════════════════════════════════════
-   ① 質問はここで直せます
-   ・「,」で区切って並んでいます。文章だけ書き換えてOK
-   ・質問を増やす/減らすのも自由（数は自動で対応します）
+   ⓪ 記録の送り先（スプレッドシート連携）
+   ・Apps ScriptのURLをここに貼ると記録が始まります
+   ・空のままなら記録せず、診断だけ動きます
    ════════════════════════════════════════════════════ */
-const QUESTIONS = [
-  "合計を電卓で計算して、Excelに手で打ち込んだことがある",
-  "ふりがなを、1件ずつ手で入力している",
-  "毎月・毎年、同じ表をゼロから作り直している",
-  "印刷したら表が切れて、何度も印刷し直したことがある",
-  "見た目を整えるために、セル結合をよく使っている",
-  "並べ替えをしたら、データがぐちゃぐちゃになったことがある",
-  "使っている関数は、ほぼSUMだけ",
-  "同じデータを、あちこちの表に何度もコピペしている",
-  "日付や曜日を、ぜんぶ手で打ち込んでいる",
-  "「このファイル、私しか触れない…」という表がある"
+const SHEET_URL = "";
+
+/* ════════════════════════════════════════════════════
+   ① 質問はここで直せます
+   ・text ＝ 質問文（自由に書き換えてOK）
+   ・cat ＝ 分野。input=入力のムダ / structure=表の作り方 /
+     formula=関数・計算 / print=印刷・見た目 / reuse=使い回し
+     （処方箋はこの分野ごとの「はい」の数で決まります）
+   ════════════════════════════════════════════════════ */
+
+/* ── サクッと版（5問）── */
+const QUESTIONS_QUICK = [
+  { text: "合計を電卓で計算して、Excelに手で打ち込んだことがある", cat: "input" },
+  { text: "見た目を整えるために、セル結合をよく使っている", cat: "structure" },
+  { text: "使っている関数は、ほぼSUMだけ", cat: "formula" },
+  { text: "印刷したら表が切れて、何度も印刷し直したことがある", cat: "print" },
+  { text: "毎月・毎年、同じ表をゼロから作り直している", cat: "reuse" }
+];
+
+/* ── しっかり版（20問）── */
+const QUESTIONS_FULL = [
+  /* 入力のムダ */
+  { text: "合計を電卓で計算して、Excelに手で打ち込んだことがある", cat: "input" },
+  { text: "ふりがなを、1件ずつ手で入力している", cat: "input" },
+  { text: "日付や曜日を、ぜんぶ手で打ち込んでいる", cat: "input" },
+  { text: "連番（1,2,3…）を、1つずつ手で入力したことがある", cat: "input" },
+  /* 表の作り方 */
+  { text: "見た目を整えるために、セル結合をよく使っている", cat: "structure" },
+  { text: "1つのセルに、名前と住所など複数の情報を入れている", cat: "structure" },
+  { text: "並べ替えをしたら、データがぐちゃぐちゃになったことがある", cat: "structure" },
+  { text: "表の途中に、合計行や空白の行をはさんでいる", cat: "structure" },
+  /* 関数・計算 */
+  { text: "使っている関数は、ほぼSUMだけ", cat: "formula" },
+  { text: "VLOOKUPは「呪文」に見える", cat: "formula" },
+  { text: "計算式の入ったセルを、うっかり消して壊したことがある", cat: "formula" },
+  { text: "数式をコピーしたら変な結果になって、結局手で直した", cat: "formula" },
+  /* 印刷・見た目 */
+  { text: "印刷したら表が切れて、何度も印刷し直したことがある", cat: "print" },
+  { text: "PDFにしたら、レイアウトが崩れたことがある", cat: "print" },
+  { text: "印刷のたびに、列の幅をその都度調整している", cat: "print" },
+  { text: "画面ではきれいなのに、紙にすると崩れる表がある", cat: "print" },
+  /* 使い回し・自動化 */
+  { text: "毎月・毎年、同じ表をゼロから作り直している", cat: "reuse" },
+  { text: "同じデータを、あちこちの表に何度もコピペしている", cat: "reuse" },
+  { text: "「このファイル、私しか触れない…」という表がある", cat: "reuse" },
+  { text: "同じ作業を毎回、手順を思い出しながらやっている", cat: "reuse" }
 ];
 
 /* ════════════════════════════════════════════════════
    ② 結果メッセージはここで直せます
-   ・min〜max ＝「はい」の数がこの範囲なら、この結果が出ます
-   ・danger ＝ 大きく出る危険度／zone ＝ レベルの添え書き
-   ・message ＝ 本文（改行したいところに \n を入れます）
+   ・min〜max ＝「はい」の数がこの範囲なら、この結果
+   ・message ＝ 本文（\n が改行）
    ════════════════════════════════════════════════════ */
-const RESULTS = [
+
+/* ── サクッと版の結果（5問中）── */
+const RESULTS_QUICK = [
   {
-    min: 0, max: 2,
-    danger: "低",
-    dangerClass: "danger-low",
+    min: 0, max: 1,
+    danger: "低", dangerClass: "danger-low",
+    zone: "いまのレベル：中〜上級ゾーン",
+    message: "すばらしい！\nExcelの「仕組み」をちゃんと使えています。\n\nしっかり版（20問）なら、さらに細かくチェックできますよ。"
+  },
+  {
+    min: 2, max: 3,
+    danger: "中", dangerClass: "danger-mid",
+    zone: "いまのレベル：ミックスゾーン（できている所と自己流が半々）",
+    message: "おしい！\nできている部分と、自己流でがんばっちゃってる部分が混ざっている状態です。\n\nどこに伸びしろが隠れているか、しっかり版（20問）だと「あなた専用のアドバイス」まで出ます。"
+  },
+  {
+    min: 4, max: 999,
+    danger: "高", dangerClass: "danger-high",
+    zone: "いまのレベル：自己流フル稼働ゾーン",
+    message: "毎日、ほんとうにがんばっています。\n\nでもね、いいお知らせ。「はい」がついた作業は、Excelに任せられるものばかり。つまり伸びしろMAX✨\n\nどこから手をつけるといいか、しっかり版（20問）で診断できます。"
+  }
+];
+
+/* ── しっかり版の結果（20問中）── */
+const RESULTS_FULL = [
+  {
+    min: 0, max: 5,
+    danger: "低", dangerClass: "danger-low",
     zone: "いまのレベル：中〜上級ゾーン",
     message: "すばらしい！\nExcelの「仕組み」をちゃんと使えています。\n\nあとは関数の引き出しを増やしたり、ピボットテーブルを味方につけたりすると、もっとラクになりますよ。\n\nここまで来ている人は、伸ばすほど周りに頼られる存在になります😊"
   },
   {
-    min: 3, max: 5,
-    danger: "中",
-    dangerClass: "danger-mid",
+    min: 6, max: 12,
+    danger: "中", dangerClass: "danger-mid",
     zone: "いまのレベル：ミックスゾーン（できている所と自己流が半々）",
-    message: "おしい！\nできている部分と、自己流でがんばっちゃってる部分が混ざっている状態です。\n\nでもね、これって実は一番伸びる位置。\n「はい」がついた項目は、ぜんぶExcelに任せられる作業なんです。\n\nそこを手放せたら、毎月の作業がぐっと軽くなりますよ。"
+    message: "おしい！\nできている部分と、自己流でがんばっちゃってる部分が混ざっている状態です。\n\nでもね、これって実は一番伸びる位置。\n「はい」がついた項目は、ぜんぶExcelに任せられる作業なんです。\n\n下の「まずこれをやるといい」から始めてみてください。"
   },
   {
-    min: 6, max: 999,
-    danger: "高",
-    dangerClass: "danger-high",
+    min: 13, max: 999,
+    danger: "高", dangerClass: "danger-high",
     zone: "いまのレベル：自己流フル稼働ゾーン",
-    message: "毎日、ほんとうにがんばっています。\nその作業、ぜんぶ手でやっていたら大変だったはず…。\n\nでもね、いいお知らせがあります。\n「はい」がついた項目は、Excelの機能で自動にできるものばかり。\n\nつまりあなたは、伸びしろMAX✨\n正しい使い方を知った瞬間、一番変化が大きいタイプです。"
+    message: "毎日、ほんとうにがんばっています。\nその作業、ぜんぶ手でやっていたら大変だったはず…。\n\nでもね、いいお知らせがあります。\n「はい」がついた項目は、Excelの機能で自動にできるものばかり。\n\nつまりあなたは、伸びしろMAX✨\nまずは下の1つから始めましょう。"
   }
 ];
 
 /* ════════════════════════════════════════════════════
-   ③ ここから下が「動かす仕組み」です
-   （直さなくて大丈夫。読みたいときのために説明コメント付き）
+   ③ 処方箋はここで直せます
+   ・「はい」がいちばん多かった分野のアドバイスが出ます
+   ════════════════════════════════════════════════════ */
+const ADVICE = {
+  input: {
+    name: "入力のムダ",
+    text: "あなたのいちばんの伸びしろは【入力のムダ】。\nExcelには「代わりに入力してくれる機能」がたくさんあります。\nまずはオートフィル（連番・日付を引っぱるだけ）と、フラッシュフィル（ふりがな・分割を一瞬で）から始めるのがおすすめ。"
+  },
+  structure: {
+    name: "表の作り方",
+    text: "あなたのいちばんの伸びしろは【表の作り方】。\n表の「土台」を整えると、並べ替えも集計も一気に安定します。\nまずは「セル結合を手放す」「1セル1情報にする」の2つから。これだけで未来のトラブルが激減します。"
+  },
+  formula: {
+    name: "関数・計算",
+    text: "あなたのいちばんの伸びしろは【関数・計算】。\n関数は暗記じゃなくて「意味がわかる」が近道です。\nSUMの次は、SUMIF（条件つき合計）とVLOOKUP（表から探してくる）の2つだけでOK。意味から覚えると呪文じゃなくなります。"
+  },
+  print: {
+    name: "印刷・見た目",
+    text: "あなたのいちばんの伸びしろは【印刷・見た目】。\n印刷は「運」じゃなくて「設定」で決まります。\nまずは改ページプレビュー（どこで切れるか先に見える）と印刷範囲の設定から。印刷し直しの紙とストレスが消えます。"
+  },
+  reuse: {
+    name: "使い回し・自動化",
+    text: "あなたのいちばんの伸びしろは【使い回し・自動化】。\n毎月ゼロから作るのは、今日で卒業できます。\nまずは「来月も使う表はテンプレート化する」から。入力する所だけ空けた原本を1つ作れば、毎月の作業が数分になります。"
+  }
+};
+
+/* ════════════════════════════════════════════════════
+   ④ ここから下が「動かす仕組み」です
+   （直さなくて大丈夫。説明コメント付き）
    ════════════════════════════════════════════════════ */
 
-let currentQuestion = 0;  // いま何問目か
-let yesCount = 0;         // 「はい」の数
+// この訪問者だけのランダムな番号（誰かは特定できない・記録の整理用）
+const SESSION_ID = Math.random().toString(36).slice(2, 8);
 
-// 「診断をはじめる」を押したとき
-function startQuiz() {
+let mode = "quick";        // いまのコース（quick=サクッと / full=しっかり）
+let questions = [];        // いま使っている質問セット
+let currentQuestion = 0;   // いま何問目か
+let yesCount = 0;          // 「はい」の数
+let catCount = {};         // 分野ごとの「はい」の数
+
+// スプレッドシートに1行記録する（SHEET_URLが空なら何もしない）
+function logEvent(event, detail = "") {
+  if (!SHEET_URL) return;
+  try {
+    fetch(SHEET_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        session: SESSION_ID,
+        version: mode === "quick" ? "サクッと版" : "しっかり版",
+        event: event,
+        detail: detail
+      })
+    });
+  } catch (e) { /* 記録に失敗しても診断は止めない */ }
+}
+
+// ページを開いた時点で1回記録
+window.addEventListener("load", () => logEvent("ページを開いた"));
+
+// コースを選んでスタート
+function startQuiz(selectedMode) {
+  mode = selectedMode;
+  questions = (mode === "quick") ? QUESTIONS_QUICK : QUESTIONS_FULL;
+  currentQuestion = 0;
+  yesCount = 0;
+  catCount = { input: 0, structure: 0, formula: 0, print: 0, reuse: 0 };
+  logEvent("診断スタート");
   showScreen("screen-quiz");
   showQuestion();
 }
@@ -263,43 +461,97 @@ function startQuiz() {
 // 質問を1問表示する
 function showQuestion() {
   document.getElementById("q-number").textContent =
-    "質問 " + (currentQuestion + 1) + " / " + QUESTIONS.length;
-  document.getElementById("question-text").textContent = QUESTIONS[currentQuestion];
+    "質問 " + (currentQuestion + 1) + " / " + questions.length;
+  document.getElementById("question-text").textContent = questions[currentQuestion].text;
   document.getElementById("progress-fill").style.width =
-    (currentQuestion / QUESTIONS.length * 100) + "%";
+    (currentQuestion / questions.length * 100) + "%";
 }
 
 // 「はい」「いいえ」を押したとき
 function answer(isYes) {
-  if (isYes) yesCount++;
+  if (isYes) {
+    yesCount++;
+    catCount[questions[currentQuestion].cat]++;
+  }
   currentQuestion++;
-  if (currentQuestion < QUESTIONS.length) {
-    showQuestion();       // 次の質問へ
+
+  // しっかり版は5問ごとに「ここまで来た」を記録（離脱がどこか分かる）
+  if (mode === "full" && (currentQuestion === 5 || currentQuestion === 10 || currentQuestion === 15)) {
+    logEvent(currentQuestion + "問目まで回答");
+  }
+
+  if (currentQuestion < questions.length) {
+    showQuestion();
   } else {
-    showResult();         // 全部答えたら結果へ
+    showResult();
   }
 }
 
 // 結果を表示する
 function showResult() {
-  // 「はい」の数に合う結果を探す
-  const result = RESULTS.find(r => yesCount >= r.min && yesCount <= r.max);
+  const results = (mode === "quick") ? RESULTS_QUICK : RESULTS_FULL;
+  const result = results.find(r => yesCount >= r.min && yesCount <= r.max);
 
   document.getElementById("result-danger").textContent = result.danger;
   document.getElementById("result-danger").className = "result-danger " + result.dangerClass;
   document.getElementById("result-zone").textContent = result.zone;
   document.getElementById("yes-count").textContent =
-    "（「はい」が " + yesCount + " 個 / " + QUESTIONS.length + " 問中）";
+    "（「はい」が " + yesCount + " 個 / " + questions.length + " 問中）";
   document.getElementById("result-message").textContent = result.message;
+
+  // しっかり版だけ：「はい」が一番多かった分野の処方箋を出す
+  const adviceBox = document.getElementById("advice-box");
+  if (mode === "full" && yesCount > 0) {
+    let topCat = "input";
+    for (const cat in catCount) {
+      if (catCount[cat] > catCount[topCat]) topCat = cat;
+    }
+    document.getElementById("advice-text").textContent = ADVICE[topCat].text;
+    adviceBox.style.display = "block";
+    logEvent("診断完了", "危険度" + result.danger + "・はい" + yesCount + "個・伸びしろ＝" + ADVICE[topCat].name);
+  } else {
+    adviceBox.style.display = "none";
+    logEvent("診断完了", "危険度" + result.danger + "・はい" + yesCount + "個");
+  }
+
+  // サクッと版だけ：しっかり版への誘導ボタンを出す
+  document.getElementById("btn-more").style.display = (mode === "quick") ? "block" : "none";
+
+  // アンケートを最初の状態に戻す
+  document.getElementById("survey-step1").style.display = "block";
+  document.getElementById("survey-step2").style.display = "none";
+  document.getElementById("survey-step3").style.display = "none";
 
   showScreen("screen-result");
 
   // 危険度ゲージをじわっと伸ばす
-  const percent = Math.min(yesCount / QUESTIONS.length * 100, 100);
+  const percent = Math.min(yesCount / questions.length * 100, 100);
   const fill = document.getElementById("gauge-fill");
   const colors = { "danger-low": "#217346", "danger-mid": "#e8a33d", "danger-high": "#d9534f" };
   fill.style.background = colors[result.dangerClass];
+  fill.style.width = "0%";
   setTimeout(() => { fill.style.width = percent + "%"; }, 100);
+}
+
+// サクッと版の結果から、しっかり版へ進む
+function goFull() {
+  logEvent("しっかり版へ進んだ");
+  startQuiz("full");
+}
+
+// アンケート：3択に答えたとき
+function surveyAnswer(choice) {
+  logEvent("アンケート回答", choice);
+  document.getElementById("survey-step1").style.display = "none";
+  document.getElementById("survey-step2").style.display = "block";
+}
+
+// アンケート：一言を送信したとき
+function surveyComment() {
+  const text = document.getElementById("survey-comment").value.trim();
+  if (text) logEvent("アンケート一言", text);
+  document.getElementById("survey-step2").style.display = "none";
+  document.getElementById("survey-step3").style.display = "block";
 }
 
 // 画面を切り替える（指定した画面だけ見せる）
