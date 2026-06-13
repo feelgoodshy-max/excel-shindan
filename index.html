@@ -317,6 +317,8 @@
    ⓪ 記録の送り先（スプレッドシート連携）
    ・Apps ScriptのURLをここに貼ると記録が始まります
    ・空のままなら記録せず、診断だけ動きます
+   ・記録は「1人＝1行」。スタートで1行できて、進むごとに
+     危険度→講座興味→一言、と同じ行の右側が埋まります
    ════════════════════════════════════════════════════ */
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbwMbieLPXQUzQJZcgN4E6khu5CP2xoBD_BVdbfjtqBaZhanAwG6ecoKHP0n7KtgUgufCA/exec";
 
@@ -448,46 +450,65 @@ const ADVICE = {
    （直さなくて大丈夫。説明コメント付き）
    ════════════════════════════════════════════════════ */
 
-// この訪問者だけのランダムな番号（誰かは特定できない・記録の整理用）
+// この訪問者だけのランダムな番号（1回の訪問ごとに変わる・誰かは特定できない）
 const SESSION_ID = Math.random().toString(36).slice(2, 8);
 
 let mode = "quick";        // いまのコース（quick=サクッと / full=しっかり）
 let questions = [];        // いま使っている質問セット
 let currentQuestion = 0;   // いま何問目か
 let answers = [];          // 各質問の答え（true=はい / false=いいえ）
-let maxReached = 0;        // 進んだ最高地点（戻っても二重記録しないため）
 let yesCount = 0;          // 「はい」の数（確認ページの後に集計）
 let catCount = {};         // 分野ごとの「はい」の数
 
-// スプレッドシートに1行記録する（SHEET_URLが空なら何もしない）
-function logEvent(event, detail = "") {
+// この訪問者の「1行ぶん」の記録。診断が進むごとに右側が埋まっていく。
+// スプレッドシートには訪問者IDをカギにして、同じ人なら同じ行を上書きする。
+let record = {
+  session: SESSION_ID,
+  datetime: "",   // スタートした時刻
+  course: "",     // サクッと / しっかり / サクッと→しっかり
+  danger: "",     // 危険度（診断完了で入る）
+  yes: "",        // はいの数
+  advice: "",     // 伸びしろ（しっかり版のみ）
+  interest: "",   // 講座興味（アンケート）
+  comment: ""     // 一言（アンケート）
+};
+
+// いまの記録をスプレッドシートに送って最新の状態にする（SHEET_URLが空なら何もしない）
+function sync() {
   if (!SHEET_URL) return;
   try {
     fetch(SHEET_URL, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        session: SESSION_ID,
-        version: mode === "quick" ? "サクッと版" : "しっかり版",
-        event: event,
-        detail: detail
-      })
+      body: JSON.stringify(record)
     });
   } catch (e) { /* 記録に失敗しても診断は止めない */ }
 }
 
-// ページを開いた時点で1回記録
-window.addEventListener("load", () => logEvent("ページを開いた"));
+// 「2026/06/13 11:02」の形で今の時刻を作る
+function nowString() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "/" + p(d.getMonth() + 1) + "/" + p(d.getDate()) +
+         " " + p(d.getHours()) + ":" + p(d.getMinutes());
+}
 
-// コースを選んでスタート
+// コースを選んでスタート（このとき初めて記録の1行ができる）
 function startQuiz(selectedMode) {
   mode = selectedMode;
   questions = (mode === "quick") ? QUESTIONS_QUICK : QUESTIONS_FULL;
   currentQuestion = 0;
   answers = [];
-  maxReached = 0;
-  logEvent("診断スタート");
+  // 時刻は最初のスタート時だけ記録（しっかり版へ進んでも同じ行に残す）
+  if (!record.datetime) record.datetime = nowString();
+  // コース名：サクッと版から進んだ場合は「サクッと→しっかり」と分かるようにする
+  if (mode === "quick") {
+    record.course = "サクッと";
+  } else {
+    record.course = (record.course === "サクッと") ? "サクッと→しっかり" : "しっかり";
+  }
+  sync();
   showScreen("screen-quiz");
   showQuestion();
 }
@@ -507,16 +528,6 @@ function showQuestion() {
 function answer(isYes) {
   answers[currentQuestion] = isYes;
   currentQuestion++;
-
-  // しっかり版は5問ごとに「ここまで来た」を記録（離脱がどこか分かる）
-  // ※「もどる」で答え直しても、二重には記録しない
-  if (currentQuestion > maxReached) {
-    maxReached = currentQuestion;
-    if (mode === "full" && (maxReached === 5 || maxReached === 10 || maxReached === 15)) {
-      logEvent(maxReached + "問目まで回答");
-    }
-  }
-
   if (currentQuestion < questions.length) {
     showQuestion();
   } else {
@@ -534,7 +545,6 @@ function goBack() {
 
 // 回答の確認ページを表示する
 function showConfirm() {
-  logEvent("確認ページ到達");
   renderConfirmList();
   showScreen("screen-confirm");
 }
@@ -583,18 +593,24 @@ function showResult() {
 
   // しっかり版だけ：「はい」が一番多かった分野の処方箋を出す
   const adviceBox = document.getElementById("advice-box");
+  let adviceName = "";
   if (mode === "full" && yesCount > 0) {
     let topCat = "input";
     for (const cat in catCount) {
       if (catCount[cat] > catCount[topCat]) topCat = cat;
     }
+    adviceName = ADVICE[topCat].name;
     document.getElementById("advice-text").textContent = ADVICE[topCat].text;
     adviceBox.style.display = "block";
-    logEvent("診断完了", "危険度" + result.danger + "・はい" + yesCount + "個・伸びしろ＝" + ADVICE[topCat].name);
   } else {
     adviceBox.style.display = "none";
-    logEvent("診断完了", "危険度" + result.danger + "・はい" + yesCount + "個");
   }
+
+  // 記録の「結果」部分を埋めて、スプレッドシートを最新化する
+  record.danger = result.danger;
+  record.yes = yesCount;
+  record.advice = adviceName;
+  sync();
 
   // サクッと版だけ：しっかり版への誘導ボタンを出す
   document.getElementById("btn-more").style.display = (mode === "quick") ? "block" : "none";
@@ -617,13 +633,13 @@ function showResult() {
 
 // サクッと版の結果から、しっかり版へ進む
 function goFull() {
-  logEvent("しっかり版へ進んだ");
   startQuiz("full");
 }
 
 // アンケート：3択に答えたとき
 function surveyAnswer(choice) {
-  logEvent("アンケート回答", choice);
+  record.interest = choice;
+  sync();
   document.getElementById("survey-step1").style.display = "none";
   document.getElementById("survey-step2").style.display = "block";
 }
@@ -631,7 +647,8 @@ function surveyAnswer(choice) {
 // アンケート：一言を送信したとき
 function surveyComment() {
   const text = document.getElementById("survey-comment").value.trim();
-  if (text) logEvent("アンケート一言", text);
+  record.comment = text;
+  sync();
   document.getElementById("survey-step2").style.display = "none";
   document.getElementById("survey-step3").style.display = "block";
 }
