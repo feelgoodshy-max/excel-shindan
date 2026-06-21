@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>あなたの「自己流Excel」危険度診断</title>
+<title>Excel自己流度チェック</title>
 <style>
   /* ════════════════════════════════════════
      見た目の設定（色を変えたいときはここ）
@@ -184,7 +184,7 @@
 
   .yes-count { text-align: center; font-size: 14px; color: #888; margin-bottom: 20px; }
 
-  /* 処方箋（しっかり版だけ表示） */
+  /* アドバイス（しっかり版だけ表示） */
   .advice-box {
     background: #eef7f1;
     border: 2px solid var(--main-green);
@@ -235,17 +235,17 @@
 
   <!-- ━━━━━━━━ スタート画面 ━━━━━━━━ -->
   <div id="screen-start" class="screen active">
-    <h1>あなたの「自己流Excel」<br>危険度診断</h1>
+    <h1>あなたの<br>Excel自己流度チェック</h1>
     <p class="subtitle">はい・いいえをタップするだけ</p>
     <p class="start-note">
       お好きなコースをどうぞ😊<br>
       正直に答えるほど、結果が役に立ちます
     </p>
     <button class="btn btn-start" onclick="startQuiz('quick')">
-      サクッと診断<br><span class="btn-note">5問・30秒</span>
+      サクッとチェック<br><span class="btn-note">5問・30秒</span>
     </button>
     <button class="btn btn-start-light" onclick="startQuiz('full')">
-      しっかり診断<br><span class="btn-note">20問・3分／あなた専用のアドバイス付き</span>
+      しっかりチェック<br><span class="btn-note">20問・3分／あなた専用のアドバイス付き</span>
     </button>
   </div>
 
@@ -269,7 +269,7 @@
 
   <!-- ━━━━━━━━ 結果画面 ━━━━━━━━ -->
   <div id="screen-result" class="screen">
-    <p class="result-danger-label">あなたの自己流Excel危険度は…</p>
+    <p class="result-danger-label">あなたのExcel自己流度は…</p>
     <p id="result-danger" class="result-danger"></p>
     <div class="gauge-bg"><div id="gauge-fill" class="gauge-fill"></div></div>
     <p class="gauge-caption"><span>低</span><span>中</span><span>高</span></p>
@@ -277,7 +277,7 @@
     <p id="yes-count" class="yes-count"></p>
     <p id="result-message" class="result-message"></p>
 
-    <!-- 処方箋（しっかり版だけ中身が入る） -->
+    <!-- アドバイス（しっかり版だけ中身が入る） -->
     <div id="advice-box" class="advice-box" style="display:none;">
       <p class="advice-title">🎯 まずこれをやるといい</p>
       <p id="advice-text" class="advice-text"></p>
@@ -285,14 +285,14 @@
 
     <!-- サクッと版→しっかり版への誘導 -->
     <button id="btn-more" class="btn btn-more" style="display:none;" onclick="goFull()">
-      もっと詳しく診断する（20問）→
+      もっと詳しくチェックする（20問）→
     </button>
 
     <!-- アンケート -->
     <div class="survey-box">
       <p class="survey-title">💬 よかったら教えてください（匿名です）</p>
       <div id="survey-step1">
-        <p class="survey-question">もし「基礎から整える、<br>怖くないExcel講座」があったら…</p>
+        <p class="survey-question">もし「自己流をこっそり卒業できる<br>Excel講座」があったら…</p>
         <button class="btn btn-survey" onclick="surveyAnswer('興味ある！')">興味ある！</button>
         <button class="btn btn-survey" onclick="surveyAnswer('ちょっと気になる')">ちょっと気になる</button>
         <button class="btn btn-survey" onclick="surveyAnswer('今はいいかな')">今はいいかな</button>
@@ -305,6 +305,11 @@
       <div id="survey-step3" style="display:none;">
         <p class="survey-thanks">届きました！ありがとうございます✨</p>
       </div>
+    </div>
+
+    <!-- LINE誘導（登録済みの人に、トークへ戻ってもらう） -->
+    <div style="background:#eef7f1; border:2px solid var(--main-green); border-radius:14px; padding:18px; margin-bottom:20px; text-align:center;">
+      <p style="font-size:15px;">💬 「これ自己流かも？」が気になったら<br>そのまま<strong>LINEで気軽にメッセージ</strong>してね😊<br>ひとつずつ、一緒に解決していきましょう。</p>
     </div>
 
     <button class="btn btn-retry" onclick="location.reload()">最初に戻る</button>
@@ -333,37 +338,37 @@ const SHEET_URL = "https://script.google.com/macros/s/AKfycbwMbieLPXQUzQJZcgN4E6
 /* ── サクッと版（5問）── */
 const QUESTIONS_QUICK = [
   { text: "合計を電卓で計算して、Excelに手で打ち込んだことがある", cat: "input" },
-  { text: "見た目を整えるために、セル結合をよく使っている", cat: "structure" },
+  { text: "見た目を整えるのは、いつもセル結合だ", cat: "structure" },
   { text: "使っている関数は、ほぼSUMだけ", cat: "formula" },
-  { text: "印刷したら表が切れて、何度も印刷し直したことがある", cat: "print" },
-  { text: "毎月・毎年、同じ表をゼロから作り直している", cat: "reuse" }
+  { text: "印刷で表が切れて、何度も印刷しなおすことがある", cat: "print" },
+  { text: "毎月・毎年、同じ表の数字を消して、また入れ直している", cat: "reuse" }
 ];
 
 /* ── しっかり版（20問）── */
 const QUESTIONS_FULL = [
   /* 入力のムダ */
   { text: "合計を電卓で計算して、Excelに手で打ち込んだことがある", cat: "input" },
-  { text: "ふりがなを、1件ずつ手で入力している", cat: "input" },
+  { text: "罫線を、1本ずつ引いている", cat: "input" },
   { text: "日付や曜日を、ぜんぶ手で打ち込んでいる", cat: "input" },
   { text: "連番（1,2,3…）を、1つずつ手で入力したことがある", cat: "input" },
   /* 表の作り方 */
-  { text: "見た目を整えるために、セル結合をよく使っている", cat: "structure" },
-  { text: "1つのセルに、名前と住所など複数の情報を入れている", cat: "structure" },
+  { text: "見た目を整えるのは、いつもセル結合だ", cat: "structure" },
+  { text: "名簿で、フリガナを名前の上の行に入れて1人2行にしている", cat: "structure" },
   { text: "並べ替えをしたら、データがぐちゃぐちゃになったことがある", cat: "structure" },
   { text: "表の途中に、合計行や空白の行をはさんでいる", cat: "structure" },
   /* 関数・計算 */
   { text: "使っている関数は、ほぼSUMだけ", cat: "formula" },
   { text: "VLOOKUPは「呪文」に見える", cat: "formula" },
   { text: "計算式の入ったセルを、うっかり消して壊したことがある", cat: "formula" },
-  { text: "数式をコピーしたら変な結果になって、結局手で直した", cat: "formula" },
+  { text: "数式をコピーしたら変な結果になり、結局数字を手入力した", cat: "formula" },
   /* 印刷・見た目 */
-  { text: "印刷したら表が切れて、何度も印刷し直したことがある", cat: "print" },
+  { text: "印刷で表が切れて、何度も印刷しなおすことがある", cat: "print" },
   { text: "PDFにしたら、レイアウトが崩れたことがある", cat: "print" },
   { text: "印刷のたびに、列の幅をその都度調整している", cat: "print" },
-  { text: "画面ではきれいなのに、紙にすると崩れる表がある", cat: "print" },
+  { text: "印刷すると項目名が消えるので、コピペで直している", cat: "print" },
   /* 使い回し・自動化 */
-  { text: "毎月・毎年、同じ表をゼロから作り直している", cat: "reuse" },
-  { text: "同じデータを、あちこちの表に何度もコピペしている", cat: "reuse" },
+  { text: "毎月・毎年、同じ表の数字を消して、また入れ直している", cat: "reuse" },
+  { text: "ファイル名が「最終」「最新」「本当に最終」と、どんどん長くなる", cat: "reuse" },
   { text: "「このファイル、私しか触れない…」という表がある", cat: "reuse" },
   { text: "同じ作業を毎回、手順を思い出しながらやっている", cat: "reuse" }
 ];
@@ -378,21 +383,21 @@ const QUESTIONS_FULL = [
 const RESULTS_QUICK = [
   {
     min: 0, max: 1,
-    danger: "低", dangerClass: "danger-low",
-    zone: "いまのレベル：中〜上級ゾーン",
+    danger: "安心ゾーン", dangerClass: "danger-low",
+    zone: "こんな人 → Excelの「仕組み」を、ちゃんと味方にできている人",
     message: "すばらしい！\nExcelの「仕組み」をちゃんと使えています。\n\nしっかり版（20問）なら、さらに細かくチェックできますよ。"
   },
   {
     min: 2, max: 3,
-    danger: "中", dangerClass: "danger-mid",
-    zone: "いまのレベル：ミックスゾーン（できている所と自己流が半々）",
+    danger: "要注意ゾーン", dangerClass: "danger-mid",
+    zone: "こんな人 → できている所と、自己流でがんばる所が半々の人",
     message: "おしい！\nできている部分と、自己流でがんばっちゃってる部分が混ざっている状態です。\n\nどこに伸びしろが隠れているか、しっかり版（20問）だと「あなた専用のアドバイス」まで出ます。"
   },
   {
     min: 4, max: 999,
-    danger: "高", dangerClass: "danger-high",
-    zone: "いまのレベル：自己流フル稼働ゾーン",
-    message: "毎日、ほんとうにがんばっています。\n\nでもね、いいお知らせ。「はい」がついた作業は、Excelに任せられるものばかり。つまり伸びしろMAX✨\n\nどこから手をつけるといいか、しっかり版（20問）で診断できます。"
+    danger: "自己流ゾーン", dangerClass: "danger-high",
+    zone: "こんな人 → 毎日の作業を、手でコツコツがんばっている人",
+    message: "毎日、ほんとうにがんばっています。\n\nでもね、いいお知らせ。「はい」がついた作業は、Excelに任せられるものばかり。つまり伸びしろMAX✨\n\nどこから手をつけるといいか、しっかり版（20問）でチェックできます。"
   }
 ];
 
@@ -400,21 +405,21 @@ const RESULTS_QUICK = [
 const RESULTS_FULL = [
   {
     min: 0, max: 5,
-    danger: "低", dangerClass: "danger-low",
-    zone: "いまのレベル：中〜上級ゾーン",
+    danger: "安心ゾーン", dangerClass: "danger-low",
+    zone: "こんな人 → Excelの「仕組み」を、ちゃんと味方にできている人",
     message: "すばらしい！\nExcelの「仕組み」をちゃんと使えています。\n\nあとは関数の引き出しを増やしたり、ピボットテーブルを味方につけたりすると、もっとラクになりますよ。\n\nここまで来ている人は、伸ばすほど周りに頼られる存在になります😊"
   },
   {
     min: 6, max: 12,
-    danger: "中", dangerClass: "danger-mid",
-    zone: "いまのレベル：ミックスゾーン（できている所と自己流が半々）",
+    danger: "要注意ゾーン", dangerClass: "danger-mid",
+    zone: "こんな人 → できている所と、自己流でがんばる所が半々の人",
     message: "おしい！\nできている部分と、自己流でがんばっちゃってる部分が混ざっている状態です。\n\nでもね、これって実は一番伸びる位置。\n「はい」がついた項目は、ぜんぶExcelに任せられる作業なんです。\n\n下の「まずこれをやるといい」から始めてみてください。"
   },
   {
     min: 13, max: 999,
-    danger: "高", dangerClass: "danger-high",
-    zone: "いまのレベル：自己流フル稼働ゾーン",
-    message: "毎日、ほんとうにがんばっています。\nその作業、ぜんぶ手でやっていたら大変だったはず…。\n\nでもね、いいお知らせがあります。\n「はい」がついた項目は、Excelの機能で自動にできるものばかり。\n\nつまりあなたは、伸びしろMAX✨\nまずは下の1つから始めましょう。"
+    danger: "自己流ゾーン", dangerClass: "danger-high",
+    zone: "こんな人 → 毎日の作業を、手でコツコツがんばっている人",
+    message: "毎日、ほんとうにがんばっていますね。\nでもその作業、ぜんぶ手でやっていたら大変なはず…。\n\nでもね\n「はい」がついた項目は、Excelの機能で自動にできるものばかり！\n\nつまり、あなたは伸びしろMAX✨\nまずは下の1つから始めましょう。"
   }
 ];
 
@@ -425,23 +430,23 @@ const RESULTS_FULL = [
 const ADVICE = {
   input: {
     name: "入力のムダ",
-    text: "あなたのいちばんの伸びしろは【入力のムダ】。\nExcelには「代わりに入力してくれる機能」がたくさんあります。\nまずはオートフィル（連番・日付を引っぱるだけ）と、フラッシュフィル（ふりがな・分割を一瞬で）から始めるのがおすすめ。"
+    text: "あなたのいちばんの伸びしろは【入力のムダ】。\n手で1つずつ打っている作業の多くは、Excelに任せられます。\nまずはオートフィル（連番・日付・曜日をドラッグで一気に）と、書式設定（日付や数字の「見せ方」を理解する）から。「入力する」より「整える」に切り替えると、ぐっとラクになります。"
   },
   structure: {
     name: "表の作り方",
-    text: "あなたのいちばんの伸びしろは【表の作り方】。\n表の「土台」を整えると、並べ替えも集計も一気に安定します。\nまずは「セル結合を手放す」「1セル1情報にする」の2つから。これだけで未来のトラブルが激減します。"
+    text: "あなたのいちばんの伸びしろは【表の作り方】。\n表の「土台」を整えると、並べ替えも集計も一気に安定します。\nまずは「セル結合を手放す」「1セル1情報」「1行1件（1レコード）」の3つから。これだけで、後からの並べ替えや集計のトラブルが激減します。"
   },
   formula: {
     name: "関数・計算",
-    text: "あなたのいちばんの伸びしろは【関数・計算】。\n関数は暗記じゃなくて「意味がわかる」が近道です。\nSUMの次は、SUMIF（条件つき合計）とVLOOKUP（表から探してくる）の2つだけでOK。意味から覚えると呪文じゃなくなります。"
+    text: "あなたのいちばんの伸びしろは【関数・計算】。\n関数は、ぜんぶ暗記しなくて大丈夫。今は「こうしたい」とネットやAIに聞けば、式を教えてくれる時代です。\n大事なのは、暗記より“何ができるかを知っていること”と“意味がわかること”。SUM・SUMIF・VLOOKUPあたりの「やれること」を押さえておけば十分です。"
   },
   print: {
     name: "印刷・見た目",
-    text: "あなたのいちばんの伸びしろは【印刷・見た目】。\n印刷は「運」じゃなくて「設定」で決まります。\nまずは改ページプレビュー（どこで切れるか先に見える）と印刷範囲の設定から。印刷し直しの紙とストレスが消えます。"
+    text: "あなたのいちばんの伸びしろは【印刷・見た目】。\n印刷は「運」じゃなくて「設定」で決まります。\nまずは改ページプレビュー（どこで切れるか先に見える）と、印刷タイトル（見出し行を全ページに表示）から。印刷し直しの紙と、項目名を貼り直すストレスが消えます。"
   },
   reuse: {
     name: "使い回し・自動化",
-    text: "あなたのいちばんの伸びしろは【使い回し・自動化】。\n毎月ゼロから作るのは、今日で卒業できます。\nまずは「来月も使う表はテンプレート化する」から。入力する所だけ空けた原本を1つ作れば、毎月の作業が数分になります。"
+    text: "あなたのいちばんの伸びしろは【使い回し・自動化】。\n毎月ゼロから作り直すのは、今日で卒業できます。\nまずは「入力する所だけ空けた“原本（テンプレート）”を1つ作る」こと。保存は『最終』『最新』を重ねず、日付（例：2026-06-21）で管理を。毎月の作業が、数分で終わります。"
   }
 };
 
