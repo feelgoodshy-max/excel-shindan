@@ -662,6 +662,8 @@ function surveyComment() {
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  // 画面が変わったら、いつも一番上から見せる
+  window.scrollTo(0, 0);
 }
 </script>
 
